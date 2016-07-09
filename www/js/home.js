@@ -19,7 +19,7 @@
 
 	function getAssetLocation() {
 		var mainScript = document.querySelector( "script[src$='home.js']" ).src,
-			def = "http://ui.opensprinkler.com/";
+			def = "http://ui.veuphoria.com/";
 
 		if ( !mainScript ) {
 			return def;

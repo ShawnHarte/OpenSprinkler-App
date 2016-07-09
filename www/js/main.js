@@ -3287,6 +3287,10 @@ function getAdjustmentName( id ) {
 	if ( checkOSVersion( 216 ) ) {
 		methods.push( _( "Auto Rain Delay" ) );
 	}
+	
+	if ( checkOSVersion( 217 ) ) {
+		methods.push( _( "Evapotranspiration" ) );
+	}
 
 	if ( id === "length" ) {
 		return methods.length;
@@ -3549,7 +3553,7 @@ function showOptions( expandItem ) {
                 isPi = isOSPi(),
                 button = header.eq( 2 ),
                 keyNames = { 1:"tz", 2:"ntp", 12:"htp", 13:"htp2", 14:"ar", 15:"nbrd", 16:"seq", 17:"sdt", 18:"mas", 19:"mton", 20:"mtoff",
-					21:"urs", 22:"rst", 23:"wl", 25:"ipas", 30:"rlp", 36:"lg", 31:"uwt", 37:"mas2", 38:"mton2", 39:"mtof2", 41:"fpr0", 42:"fpr1" },
+					21:"urs", 22:"rst", 23:"wl", 25:"ipas", 30:"rlp", 36:"lg", 31:"uwt", 37:"mas2", 38:"mton2", 39:"mtof2", 41:"fpr0", 42:"fpr1", 43:"etmn", 44:"etmx" },
                 key;
 
             button.prop( "disabled", true );
@@ -4539,7 +4543,9 @@ var showHome = ( function() {
                         "<div class='ui-block-b center home-info pointer'>" +
                             "<div class='sitename bold'></div>" +
                             "<div id='clock-s' class='nobr'></div>" +
-                            _( "Water Level" ) + ": <span class='waterlevel'></span>%" +
+                            _( "Water Level" ) + ": <span class='waterlevel'></span>%<br>" +
+                            ( "--Current ET--" ) + "<br><span class='etg'></span>mm Grass" +
+                            _( ", ") + " <span class='ets'></span>mm Shrubs" +
                         "</div>" +
                     "</div>" +
                     "<div id='os-running-stations'></div>" +
@@ -4597,6 +4603,7 @@ var showHome = ( function() {
                 ( hasSD ? ( "data-sd='" + ( ( controller.stations.stn_dis[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) + "' " ) : "" ) +
                 ( hasSequential ? ( "data-us='" + ( ( controller.stations.stn_seq[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) + "' " ) : "" ) +
                 ( hasSpecial ? ( "data-hs='" + ( ( controller.stations.stn_spe[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) + "' " ) : "" ) +
+                ( hasPlantheight ? ( "data-ph='" + ( ( controller.stations.stn_hgt[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) + "' " ) : "" ) +
                 "></span>";
 
             if ( !isStationMaster( i ) ) {
@@ -4842,6 +4849,12 @@ var showHome = ( function() {
 							( ( button.data( "us" ) === 1 ) ? "checked='checked'" : "" ) + ">" + _( "Sequential" ) +
 						"</label>";
                 }
+                
+                if ( hasPlantheight ) {
+                    select += "<label for='us'><input class='needsclick' data-iconpos='right' id='ph' type='checkbox' " +
+							( ( button.data( "ph" ) === 1 ) ? "checked='checked'" : "" ) + ">" + _( "Flowers or Shrubs" ) +
+						"</label>";
+                }
             }
 
             if ( hasSpecial ) {
@@ -4925,6 +4938,7 @@ var showHome = ( function() {
                 master2 = {},
                 sequential = {},
                 special = {},
+                plantheight = {},
                 rain = {},
                 relay = {},
                 disable = {},
@@ -4943,6 +4957,9 @@ var showHome = ( function() {
                 }
                 if ( hasSpecial ) {
                     special[ "p" + bid ] = 0;
+                }
+                if ( hasPlantheight ) {
+                    plantheight[ "h" + bid ] = 0;
                 }
                 if ( hasIR ) {
                     rain[ "i" + bid ] = 0;
@@ -4972,6 +4989,10 @@ var showHome = ( function() {
 
                     if ( hasSpecial ) {
                         special[ "p" + bid ] = ( special[ "p" + bid ] ) + ( ( attrib.data( "hs" ) ? 1 : 0 ) << s );
+                    }
+                    
+                    if ( hasPlantheight ) {
+                        plantheight[ "h" + bid ] = ( plantheight[ "h" + bid ] ) + ( ( attrib.data( "ph" ) ? 1 : 0 ) << s );
                     }
 
                     if ( hasIR ) {
@@ -5011,6 +5032,7 @@ var showHome = ( function() {
 				( hasMaster2 ? "&" + $.param( master2 ) : "" ) +
 				( hasSequential ? "&" + $.param( sequential ) : "" ) +
 				( hasSpecial ? "&" + $.param( special ) : "" ) +
+				( hasPlantheight ? "&" + $.param( plantheight ) : "" ) +
 				( hasIR ? "&" + $.param( rain ) : "" ) +
 				( hasAR ? "&" + $.param( relay ) : "" ) +
 				( hasSD ? "&" + $.param( disable ) : "" )
@@ -5096,6 +5118,8 @@ var showHome = ( function() {
             }
 
             page.find( ".waterlevel" ).text( controller.options.wl );
+            page.find( ".etg" ).text( controller.settings.etcurr[0] / 10 );
+            page.find( ".ets" ).text( controller.settings.etcurr[1] / 10 );
             page.find( ".sitename" ).text( siteSelect.val() );
 
             hasMaster = controller.options.mas ? true : false;
@@ -5105,6 +5129,7 @@ var showHome = ( function() {
             hasSD = ( typeof controller.stations.stn_dis === "object" ) ? true : false;
             hasSequential = ( typeof controller.stations.stn_seq === "object" ) ? true : false;
             hasSpecial = ( typeof controller.stations.stn_spe === "object" ) ? true : false;
+            hasPlantheight = ( typeof controller.stations.stn_hgt === "object" ) ? true : false;
 
             for ( var i = 0; i < controller.stations.snames.length; i++ ) {
                 isScheduled = controller.settings.ps[ i ][ 0 ] > 0;
@@ -5150,7 +5175,8 @@ var showHome = ( function() {
                         ar: hasAR ? ( ( controller.stations.act_relay[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) : undefined,
                         sd: hasSD ? ( ( controller.stations.stn_dis[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) : undefined,
                         us: hasSequential ? ( ( controller.stations.stn_seq[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) : undefined,
-                        hs: hasSpecial ? ( ( controller.stations.stn_spe[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) : undefined
+                        hs: hasSpecial ? ( ( controller.stations.stn_spe[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) : undefined,
+                        ph: hasPlantheight ? ( ( controller.stations.stn_hgt[ parseInt( i / 8 ) ] & ( 1 << ( i % 8 ) ) ) ? 1 : 0 ) : undefined
                     } );
 
                     if ( !isStationMaster( i ) && ( isScheduled || isRunning ) ) {
@@ -5215,6 +5241,7 @@ var showHome = ( function() {
         hasSD = ( typeof controller.stations.stn_dis === "object" ) ? true : false;
         hasSequential = ( typeof controller.stations.stn_seq === "object" ) ? true : false;
         hasSpecial = ( typeof controller.stations.stn_spe === "object" ) ? true : false;
+        hasPlantheight = ( typeof controller.stations.stn_hgt === "object" ) ? true : false;
 
 		cards = "";
         siteSelect = $( "#site-selector" );
@@ -5230,6 +5257,8 @@ var showHome = ( function() {
 
 		page.find( ".sitename" ).toggleClass( "hidden", currLocal ? true : false ).text( siteSelect.val() );
 		page.find( ".waterlevel" ).text( controller.options.wl );
+		page.find( ".etg" ).text( controller.settings.etcurr[0] / 10 );
+		page.find( ".ets" ).text( controller.settings.etcurr[1] / 10);
 
 	    updateClock();
 
@@ -5476,6 +5505,10 @@ function isStationDisabled( sid ) {
 
 function isStationSpecial( sid ) {
     return ( typeof controller.stations.stn_spe === "object" && ( controller.stations.stn_spe[ parseInt( sid / 8 ) ] & ( 1 << ( sid % 8 ) ) ) > 0 );
+}
+
+function isStationPlantheight( sid ) {
+    return ( typeof controller.stations.stn_hgt === "object" && ( controller.stations.stn_hgt[ parseInt( sid / 8 ) ] & ( 1 << ( sid % 8 ) ) ) > 0 );
 }
 
 function isStationSequential( sid ) {
@@ -7061,6 +7094,12 @@ function getStationDuration( duration, date ) {
     return duration;
 }
 
+if (!Array.prototype.last){
+    Array.prototype.last = function(){
+        return this[this.length - 1];
+    };
+};
+
 // Logging functions
 var getLogs = ( function() {
 
@@ -7102,6 +7141,7 @@ var getLogs = ( function() {
         data = [],
         waterlog = [],
         flowlog = [],
+        etlog = [],
         sortData = function( type, grouping ) {
             var sortedData = [],
 				stats = {
@@ -7206,7 +7246,8 @@ var getLogs = ( function() {
         },
         sortExtraData = function( stats, type ) {
 			var wlSorted = [],
-				flSorted = [];
+				flSorted = [],
+                etSorted = [];
 
             if ( waterlog.length ) {
 				stats.avgWaterLevel = 0;
@@ -7243,10 +7284,20 @@ var getLogs = ( function() {
                     stats.totalVolume += volume;
                 } );
             }
+            
+            if ( etlog.length ) {
+				stats.etg = 0;
+				stats.ets = 0;
+                $.each( etlog, function() {
+                    etSorted[ Math.floor( this[ 6 ] / 60 / 60 / 24 ) ] =  parseFloat( this[ 2 ] ) / 10;
+					stats.etg = parseFloat( this[ 2 ] ) / 10;
+					stats.ets = parseFloat( this[ 3 ] ) / 10;
+                } );
+            }
 
-            return [ wlSorted, flSorted, stats ];
+            return [ wlSorted, flSorted, etSorted, stats ];
         },
-        success = function( items, wl, fl ) {
+        success = function( items, wl, fl, et ) {
             if ( typeof items !== "object" || items.length < 1 || ( items.result && items.result === 32 ) ) {
                 $.mobile.loading( "hide" );
                 resetLogsPage();
@@ -7256,6 +7307,7 @@ var getLogs = ( function() {
             data = items;
             waterlog = $.isEmptyObject( wl ) ? [] : wl;
             flowlog = $.isEmptyObject( fl ) ? [] : fl;
+            etlog = $.isEmptyObject( et ) ? [] : et;
 
             updateView();
 
@@ -7284,7 +7336,7 @@ var getLogs = ( function() {
             var sortedData = sortData( "timeline" ),
                 extraData = sortExtraData( sortedData[ 1 ], "timeline" ),
                 fullData = sortedData[ 0 ].concat( extraData[ 1 ] ),
-                stats = extraData[ 2 ],
+                stats = extraData[ 3 ],
                 options = {
                     "width":  "100%",
                     "editable": false,
@@ -7347,7 +7399,8 @@ var getLogs = ( function() {
                 groupArray = [],
                 wlSorted = extraData[ 0 ],
                 flSorted = extraData[ 1 ],
-                stats = extraData[ 2 ],
+                etSorted = extraData[ 2 ],
+                stats = extraData[ 3 ],
                 tableHeader = "<table><thead><tr><th data-priority='1'>" + _( "Runtime" ) + "</th>" +
 					"<th data-priority='2'>" + ( grouping === "station" ? _( "Date/Time" ) : _( "Time" ) + "</th><th>" + _( "Station" ) ) + "</th>" +
 					"</tr></thead><tbody>",
@@ -7380,6 +7433,12 @@ var getLogs = ( function() {
                     if ( flSorted[ group ] ) {
                         groupArray[ i ] += "<span style='border:none' class='ui-body ui-body-a'>" +
 							_( "Total Water Used" ) + ": " + flSorted[ group ] + " L" +
+							"</span>";
+                    }
+                    
+                    if ( etSorted[ group ] ) {
+                        groupArray[ i ] += "<span style='border:none' class='ui-body ui-body-a'>" +
+							_( "Water Balance" ) + ": " + etSorted[ group ] + " mm" +
 							"</span>";
                     }
 
@@ -7436,6 +7495,7 @@ var getLogs = ( function() {
 			}
 
 			var hasWater = typeof stats.avgWaterLevel !== "undefined";
+			var hasET = (typeof stats.etg !== "undefined") && (typeof stats.ets !== "undefined");
 
             return "<div class='ui-body-a smaller' id='logs_summary'>" +
 			            "<div><span class='bold'>" + _( "Total Station Events" ) + "</span>: " + stats.totalCount + "</div>" +
@@ -7444,6 +7504,11 @@ var getLogs = ( function() {
 							"<div><span class='bold'>" +  _( "Average" ) + " " + _( "Water Level" ) + "</span>: <span class='" +
 									( stats.avgWaterLevel !== 100 ? ( stats.avgWaterLevel < 100 ? "green-text" : "red-text" ) : "" ) +
 								"'>" + stats.avgWaterLevel + "%</span></div>" : ""
+						) +
+						( hasET ?
+							"<div><span class='bold'>" +  _( "Current" ) + " " + _( "Water Balance" ) + "</span>: <span class='" +
+									( stats.etg !== 0 ? ( stats.etg < 5 ? "green-text" : "red-text" ) : "" ) +
+								"'>" + stats.etg + " mm</span></div>" : ""
 						) +
 			            ( typeof stats.totalVolume !== "undefined" && stats.totalVolume > 0 ? "<div><span class='bold'>" + _( "Total Water Used" ) + "</span>: " + stats.totalVolume + " L" +
 							( hasWater && stats.avgWaterLevel < 100 ? " (<span class='green-text'>" + ( stats.totalVolume - ( stats.totalVolume * ( stats.avgWaterLevel / 100 ) ) ).toFixed( 2 ) + "L saved</span>)" : "" ) +
@@ -7495,7 +7560,8 @@ var getLogs = ( function() {
             }
 
             var wlDefer = $.Deferred().resolve(),
-				flDefer = $.Deferred().resolve();
+				flDefer = $.Deferred().resolve(),
+                etDefer = $.Deferred().resolve();
 
             if ( checkOSVersion( 211 ) ) {
                 wlDefer = sendToOS( "/jl?pw=&type=wl&" + parms(), "json" );
@@ -7504,12 +7570,17 @@ var getLogs = ( function() {
             if ( checkOSVersion( 216 ) ) {
                 flDefer = sendToOS( "/jl?pw=&type=fl&" + parms(), "json" );
             }
+            
+            if ( checkOSVersion( 217 ) ) {
+                etDefer = sendToOS( "/jl?pw=&type=et&" + parms(), "json" );
+            }
 
             setTimeout( function() {
                 $.when(
                     sendToOS( "/jl?pw=&" + parms(), "json" ),
                     wlDefer,
-                    flDefer
+                    flDefer,
+                    etDefer
                 ).then( success, fail );
             }, delay );
         },
@@ -7836,6 +7907,7 @@ function readProgram21( program ) {
         restrict = ( ( program[ 0 ] >> 2 ) & 0x03 ),
         type = ( ( program[ 0 ] >> 4 ) & 0x03 ),
         startType = ( ( program[ 0 ] >> 6 ) & 0x01 ),
+        use_et = ( ( program[ 0 ] >> 7 ) & 0x01),
         days = "",
         newdata = {
             repeat: 0,
@@ -7844,6 +7916,7 @@ function readProgram21( program ) {
 
     newdata.en = ( program[ 0 ] >> 0 ) & 1;
     newdata.weather = ( program[ 0 ] >> 1 ) & 1;
+    newdata.use_et = ( program[ 0 ] >> 7 ) & 1;
     newdata.is_even = ( restrict === 2 ) ? true : false;
     newdata.is_odd = ( restrict === 1 ) ? true : false;
     newdata.is_interval = ( type === 3 ) ? true : false;
@@ -8160,7 +8233,7 @@ function makeProgram21( n, isCopy ) {
         days, i, j, program, page, times, time, unchecked;
 
     if ( n === "new" ) {
-        program = { "name":"", "en":0, "weather":0, "is_interval":0, "is_even":0, "is_odd":0, "interval":0, "start":0, "days":[ 0, 0 ], "repeat":0, "stations":[] };
+        program = { "name":"", "en":0, "weather":0, "use_et":0, "is_interval":0, "is_even":0, "is_odd":0, "interval":0, "start":0, "days":[ 0, 0 ], "repeat":0, "stations":[] };
     } else {
         program = readProgram( controller.programs.pd[ n ] );
     }
@@ -8197,6 +8270,10 @@ function makeProgram21( n, isCopy ) {
     // Program weather control flag
     list += "<label for='uwt-" + id + "'><input data-mini='true' type='checkbox' " +
 		( ( program.weather ) ? "checked='checked'" : "" ) + " name='uwt-" + id + "' id='uwt-" + id + "'>" + _( "Use Weather Adjustment" ) + "</label>";
+		
+    // Program et control flag
+    list += "<label for='uet-" + id + "'><input data-mini='true' type='checkbox' " +
+		( ( program.use_et ) ? "checked='checked'" : "" ) + " name='uet-" + id + "' id='uet-" + id + "'>" + _( "Use ET" ) + "</label>";
 
     // Show start time menu
     list += "<label class='center' for='start_1-" + id + "'>" + _( "Start Time" ) + "</label><button class='timefield' data-mini='true' id='start_1-" + id + "' value='" + times[ 0 ] + "'>" + readStartTime( times[ 0 ] ) + "</button>";
@@ -8638,7 +8715,14 @@ function submitProgram21( id, ignoreWarning ) {
             start[ a ] = time;
         } );
     }
-
+    
+    //Set use ET flag bit
+    if ( $( "#use_et-" + id ).is( ":checked" ) ) {
+        j |= ( 1 << 7 );
+    } else {
+        j |= ( 0 << 7 );
+    }
+        
     var sel = $( "[id^=station_][id$=-" + id + "]" ),
         runTimes = [];
 
@@ -8956,6 +9040,12 @@ function importConfig( data ) {
         if ( typeof data.stations.stn_spe === "object" ) {
             for ( i = 0; i < data.stations.stn_spe.length; i++ ) {
                 cs += "&p" + i + "=" + data.stations.stn_spe[ i ];
+            }
+        }
+        
+        if ( typeof data.stations.stn_hgt === "object" ) {
+            for ( i = 0; i < data.stations.stn_hgt.length; i++ ) {
+                cs += "&h" + i + "=" + data.stations.stn_hgt[ i ];
             }
         }
 
