@@ -3287,7 +3287,7 @@ function getAdjustmentName( id ) {
 	if ( checkOSVersion( 216 ) ) {
 		methods.push( _( "Auto Rain Delay" ) );
 	}
-	
+
 	if ( checkOSVersion( 217 ) ) {
 		methods.push( _( "Evapotranspiration" ) );
 	}
@@ -4849,7 +4849,7 @@ var showHome = ( function() {
 							( ( button.data( "us" ) === 1 ) ? "checked='checked'" : "" ) + ">" + _( "Sequential" ) +
 						"</label>";
                 }
-                
+
                 if ( hasPlantheight ) {
                     select += "<label for='us'><input class='needsclick' data-iconpos='right' id='ph' type='checkbox' " +
 							( ( button.data( "ph" ) === 1 ) ? "checked='checked'" : "" ) + ">" + _( "Flowers or Shrubs" ) +
@@ -4990,7 +4990,7 @@ var showHome = ( function() {
                     if ( hasSpecial ) {
                         special[ "p" + bid ] = ( special[ "p" + bid ] ) + ( ( attrib.data( "hs" ) ? 1 : 0 ) << s );
                     }
-                    
+
                     if ( hasPlantheight ) {
                         plantheight[ "h" + bid ] = ( plantheight[ "h" + bid ] ) + ( ( attrib.data( "ph" ) ? 1 : 0 ) << s );
                     }
@@ -7284,7 +7284,7 @@ var getLogs = ( function() {
                     stats.totalVolume += volume;
                 } );
             }
-            
+
             if ( etlog.length ) {
 				stats.etg = 0;
 				stats.ets = 0;
@@ -7435,7 +7435,7 @@ var getLogs = ( function() {
 							_( "Total Water Used" ) + ": " + flSorted[ group ] + " L" +
 							"</span>";
                     }
-                    
+
                     if ( etSorted[ group ] ) {
                         groupArray[ i ] += "<span style='border:none' class='ui-body ui-body-a'>" +
 							_( "Water Balance" ) + ": " + etSorted[ group ] + " mm" +
@@ -7570,7 +7570,7 @@ var getLogs = ( function() {
             if ( checkOSVersion( 216 ) ) {
                 flDefer = sendToOS( "/jl?pw=&type=fl&" + parms(), "json" );
             }
-            
+
             if ( checkOSVersion( 217 ) ) {
                 etDefer = sendToOS( "/jl?pw=&type=et&" + parms(), "json" );
             }
@@ -8270,7 +8270,7 @@ function makeProgram21( n, isCopy ) {
     // Program weather control flag
     list += "<label for='uwt-" + id + "'><input data-mini='true' type='checkbox' " +
 		( ( program.weather ) ? "checked='checked'" : "" ) + " name='uwt-" + id + "' id='uwt-" + id + "'>" + _( "Use Weather Adjustment" ) + "</label>";
-		
+
     // Program et control flag
     list += "<label for='uet-" + id + "'><input data-mini='true' type='checkbox' " +
 		( ( program.use_et ) ? "checked='checked'" : "" ) + " name='uet-" + id + "' id='uet-" + id + "'>" + _( "Use ET" ) + "</label>";
@@ -8646,6 +8646,7 @@ function submitProgram21( id, ignoreWarning ) {
         stationSelected = 0,
         en = ( $( "#en-" + id ).is( ":checked" ) ) ? 1 : 0,
         weather = ( $( "#uwt-" + id ).is( ":checked" ) ) ? 1 : 0,
+        useet = ( $( "#uet-" + id ).is( ":checked" ) ) ? 1 : 0,
         j = 0,
         daysin, i, name, url;
 
@@ -8715,14 +8716,10 @@ function submitProgram21( id, ignoreWarning ) {
             start[ a ] = time;
         } );
     }
-    
+
     //Set use ET flag bit
-    if ( $( "#use_et-" + id ).is( ":checked" ) ) {
-        j |= ( 1 << 7 );
-    } else {
-        j |= ( 0 << 7 );
-    }
-        
+    j |= ( useet << 7 );
+
     var sel = $( "[id^=station_][id$=-" + id + "]" ),
         runTimes = [];
 
@@ -9042,7 +9039,7 @@ function importConfig( data ) {
                 cs += "&p" + i + "=" + data.stations.stn_spe[ i ];
             }
         }
-        
+
         if ( typeof data.stations.stn_hgt === "object" ) {
             for ( i = 0; i < data.stations.stn_hgt.length; i++ ) {
                 cs += "&h" + i + "=" + data.stations.stn_hgt[ i ];
