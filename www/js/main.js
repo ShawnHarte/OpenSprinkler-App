@@ -10538,18 +10538,18 @@ function showDurationBox( opt ) {
                 var state = ( dir === 1 ) ? true : false;
 
                 if ( dir === 1 ) {
-                    if ( getValue() >= 60 ) {
+                    if ( getValue() >= 180 ) {
                         toggleInput( "seconds", state );
                     }
                     if ( getValue() >= 10800 ) {
                         toggleInput( "minutes", state );
                     }
                 } else if ( dir === -1 ) {
-                    if ( getValue() <= -60 ) {
+                    if ( getValue() <= -180 ) {
                         toggleInput( "seconds", !state );
                     } else if ( getValue() <= -10800 ) {
                         toggleInput( "minutes", !state );
-                    } else if ( getValue() < 60 ) {
+                    } else if ( getValue() < 180 ) {
                         toggleInput( "seconds", state );
                     } else if ( getValue() < 10800 ) {
                         toggleInput( "minutes", state );
@@ -10603,7 +10603,7 @@ function showDurationBox( opt ) {
     } );
 
     if ( !opt.preventCompression && checkOSVersion( 210 ) ) {
-        if ( opt.seconds <= -60 ) {
+        if ( opt.seconds <= -180 ) {
             toggleInput( "seconds", true );
         }
 
@@ -10611,7 +10611,7 @@ function showDurationBox( opt ) {
             toggleInput( "minutes", true );
         }
 
-        if ( opt.seconds >= 60 ) {
+        if ( opt.seconds >= 180 ) {
             toggleInput( "seconds", true );
         }
 
