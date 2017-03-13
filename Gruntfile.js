@@ -23,7 +23,7 @@ module.exports = function( grunt ) {
 	grunt.loadNpmTasks( "grunt-contrib-csslint" );
 	grunt.loadNpmTasks( "grunt-contrib-clean" );
 	grunt.loadNpmTasks( "grunt-jscs" );
-	grunt.loadTasks( "tasks" );
+	grunt.loadNpmTasks( "grunt-blanket-mocha" );
 
 	var bumpVersion = function( version ) {
 			var join = ".",

@@ -5,7 +5,7 @@
   "phonegap": {
     "id": "1371093"
   },
-  "version": "1.4.11",
+  "version": "1.5.0",
   "description": "Designed to allow intuitive control of the OpenSprinkler irrigation controller.",
   "main": "index.html",
   "scripts": {
@@ -46,19 +46,20 @@
     "codecov.io": "^0.1.6",
     "coveralls": "^2.11.4",
     "grunt": "^1.0.1",
+    "grunt-blanket-mocha": "^0.5.0",
     "grunt-contrib-clean": "^1.0.0",
     "grunt-contrib-compress": "^1.2.0",
-    "grunt-contrib-csslint": "^1.0.0",
+    "grunt-contrib-csslint": "^2.0.0",
     "grunt-contrib-cssmin": "^1.0.1",
     "grunt-contrib-jshint": "^1.0.0",
-    "grunt-contrib-uglify": "^1.0.1",
-    "grunt-jscs": "^2.3.0",
-    "grunt-lib-phantomjs": "^0.7.1",
-    "grunt-shell": "^1.1.2",
+    "grunt-contrib-uglify": "^2.0.0",
+    "grunt-jscs": "^3.0.1",
+    "grunt-lib-phantomjs": "^1.1.0",
+    "grunt-shell": "^2.0.0",
     "grunt-text-replace": "^0.4.0",
     "lcov-result-merger": "^1.0.2",
-    "lodash": "^3.6.0",
-    "mocha": "^2.3.4",
+    "lodash": "^4.16.4",
+    "mocha": "^3.1.0",
     "xcode": "^0.8.2"
   }
 }

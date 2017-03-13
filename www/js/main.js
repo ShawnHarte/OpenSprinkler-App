@@ -122,21 +122,24 @@ var isIEMobile = /IEMobile/.test( navigator.userAgent ),
     currAuthPass, currLocal, currLang, language, deviceip, errorTimeout, weather, weatherKeyFail, openPanel;
 
 // Redirect jQuery Mobile DOM manipulation to prevent error
-if ( isWinApp ) {
+if ( window.MSApp ) {
 
-    // Add link to privacy statement
-    var settingsPane = Windows.UI.ApplicationSettings.SettingsPane.getForCurrentView();
+	if ( window.Windows && Windows.UI && Windows.UI.ApplicationSettings ) {
 
-    // Bind the privacy policy to the settings panel
-    settingsPane.addEventListener( "commandsrequested", function( eventArgs ) {
-        var applicationCommands = eventArgs.request.applicationCommands;
-        var privacyCommand = new Windows.UI.ApplicationSettings.SettingsCommand(
-			"privacy", "Privacy Policy", function() {
-				window.open( "https://albahra.com/journal/privacy-policy" );
-			}
-        );
-        applicationCommands.append( privacyCommand );
-    } );
+	    // Add link to privacy statement
+	    var settingsPane = Windows.UI.ApplicationSettings.SettingsPane.getForCurrentView();
+
+	    // Bind the privacy policy to the settings panel
+	    settingsPane.addEventListener( "commandsrequested", function( eventArgs ) {
+	        var applicationCommands = eventArgs.request.applicationCommands;
+	        var privacyCommand = new Windows.UI.ApplicationSettings.SettingsCommand(
+				"privacy", "Privacy Policy", function() {
+					window.open( "https://albahra.com/journal/privacy-policy" );
+				}
+	        );
+	        applicationCommands.append( privacyCommand );
+	    } );
+	}
 
     // Cache the old domManip function.
     $.fn.oldDomManIp = $.fn.domManip;
@@ -231,6 +234,9 @@ $( document )
     if ( isChromeApp || window.location.protocol === "file:" ) {
         $.mobile.hashListeningEnabled = false;
     }
+
+    $.support.cors = true;
+    $.mobile.allowCrossDomainPages = true;
 } )
 .on( "pagebeforechange", function( e, data ) {
     var page = data.toPage,
@@ -1146,6 +1152,13 @@ function updateControllerSettings( callback ) {
                 if ( typeof settings.lrun === "undefined" ) {
                     settings.lrun = [ 0, 0, 0, 0 ];
                 }
+
+                // Update the current coordinates if the user's location is using them
+                if ( settings.loc.match( regex.gps ) ) {
+                    var location = settings.loc.split( "," );
+                    currentCoordinates = [ parseFloat( location[ 0 ] ), parseFloat( location[ 1 ] ) ];
+                }
+
                 controller.settings = settings;
                 callback();
             },
@@ -2564,7 +2577,7 @@ function validateWULocation( location, callback ) {
 
     $.ajax( {
         url: "https://api.wunderground.com/api/" + controller.settings.wtkey + "/yesterday/conditions/q/" + encodeURIComponent( location ) + ".json",
-        dataType: isChromeApp ? "json" : "jsonp",
+        dataType: isChromeApp || isWinApp ? "json" : "jsonp",
         shouldRetry: retryCount
     } ).done( function( data ) {
         if ( typeof data.response.error === "object" ) {
@@ -2627,7 +2640,7 @@ function updateYahooWeather( string ) {
     $.ajax( {
         url: "https://query.yahooapis.com/v1/public/yql?q=select%20woeid%20from%20geo.placefinder%20where%20text=%22" +
 			encodeURIComponent( string || controller.settings.loc ) + "%22&format=json",
-        dataType: isChromeApp ? "json" : "jsonp",
+        dataType: isChromeApp || isWinApp ? "json" : "jsonp",
         contentType: "application/json; charset=utf-8",
         shouldRetry: retryCount,
         success: function( woeid ) {
@@ -2647,7 +2660,7 @@ function updateYahooWeather( string ) {
             $.ajax( {
                 url: "https://query.yahooapis.com/v1/public/yql?q=select%20item%2Ctitle%2Clocation%20from%20weather.forecast%20where%20woeid%3D%22" +
 					wid + "%22&format=json",
-                dataType: isChromeApp ? "json" : "jsonp",
+                dataType: isChromeApp || isWinApp ? "json" : "jsonp",
                 contentType: "application/json; charset=utf-8",
                 shouldRetry: retryCount,
                 success: function( data ) {
@@ -2700,7 +2713,7 @@ function updateWeatherBox() {
 function updateWundergroundWeather( wapikey ) {
     $.ajax( {
         url: "https://api.wunderground.com/api/" + wapikey + "/yesterday/conditions/forecast/alerts/lang:EN/q/" + encodeURIComponent( controller.settings.loc ) + ".json",
-        dataType: isChromeApp ? "json" : "jsonp",
+        dataType: isChromeApp || isWinApp ? "json" : "jsonp",
         contentType: "application/json; charset=utf-8",
         shouldRetry: retryCount,
         success: function( data ) {
@@ -3112,7 +3125,7 @@ function overlayMap( callback ) {
             $.ajax( {
                 url: "https://api.wunderground.com/api/" + controller.settings.wtkey + "/geolookup/q/" +
                     ( latitude === -999 || longitude === -999 ? "autoip" : encodeURIComponent( latitude ) + "," + encodeURIComponent( longitude ) ) + ".json",
-                dataType: isChromeApp ? "json" : "jsonp",
+                dataType: isChromeApp || isWinApp ? "json" : "jsonp",
                 shouldRetry: retryCount
             } ).done( function( data ) {
                 if ( typeof data.response.error === "object" ) {
@@ -3158,7 +3171,8 @@ function overlayMap( callback ) {
         var data = e.originalEvent.data;
 
         if ( typeof data.WS !== "undefined" ) {
-            callback( data.WS.split( "," ), data.station );
+            var coords = data.WS.split( "," );
+            callback( coords.length > 1 ? coords : data.WS, data.station );
             dataSent = true;
             popup.popup( "destroy" ).remove();
         } else if ( data.loaded === true ) {
@@ -3215,7 +3229,7 @@ function debugWU() {
 
     $.ajax( {
         url: "https://api.wunderground.com/api/" + controller.settings.wtkey + "/yesterday/conditions/q/" + controller.settings.loc + ".json",
-        dataType: isChromeApp ? "json" : "jsonp",
+        dataType: isChromeApp || isWinApp ? "json" : "jsonp",
         shouldRetry: retryCount
     } ).done( function( data ) {
         $.mobile.loading( "hide" );
@@ -3327,7 +3341,7 @@ function setRestriction( id, uwt ) {
 function testAPIKey( key, callback ) {
     $.ajax( {
         url: "https://api.wunderground.com/api/" + key + "/conditions/forecast/lang:EN/q/75252.json",
-        dataType: isChromeApp ? "json" : "jsonp",
+        dataType: isChromeApp || isWinApp ? "json" : "jsonp",
         shouldRetry: retryCount
     } ).done( function( data ) {
         if ( typeof data.response.error === "object" && data.response.error.type === "keynotfound" ) {
@@ -4132,16 +4146,21 @@ function showOptions( expandItem ) {
                 if ( checkOSVersion( 210 ) ) {
                     page.find( "#o1" ).selectmenu( "disable" );
                 }
-                selected[ 0 ] = parseFloat( selected[ 0 ] ).toFixed( 5 );
-                selected[ 1 ] = parseFloat( selected[ 1 ] ).toFixed( 5 );
-                if ( typeof station === "string" ) {
-                    loc.val( station );
+
+                if ( typeof selected === "string" ) {
+                    loc.val( selected ).find( "span" ).text( selected );
                 } else {
-                    loc.val( selected );
+                    selected[ 0 ] = parseFloat( selected[ 0 ] ).toFixed( 5 );
+                    selected[ 1 ] = parseFloat( selected[ 1 ] ).toFixed( 5 );
+                    if ( typeof station === "string" ) {
+                        loc.val( station );
+                    } else {
+                        loc.val( selected );
+                    }
+                    coordsToLocation( selected[ 0 ], selected[ 1 ], function( result ) {
+                        loc.find( "span" ).text( result );
+                    } );
                 }
-                coordsToLocation( selected[ 0 ], selected[ 1 ], function( result ) {
-                    loc.find( "span" ).text( result );
-                } );
                 validateWULocation( selected, function( isValid ) {
                     if ( isValid ) {
                         loc.addClass( "green" );
@@ -4235,6 +4254,7 @@ function showOptions( expandItem ) {
 
 				sites[ data.current_site ].notes = {};
 				sites[ data.current_site ].images = {};
+				sites[ data.current_site ].lastRunTime = {};
 
 		        storage.set( { "sites": JSON.stringify( sites ) }, cloudSaveSites );
             } );
@@ -4632,69 +4652,82 @@ var showHome = ( function() {
                 name = button.siblings( "[id='station_" + id + "']" ),
                 showSpecialOptions = function( value ) {
 					var opts = select.find( "#specialOpts" ),
-						hex = controller.special && controller.special.hasOwnProperty( id ) ? controller.special[ id ].sd : "",
-
-						// Remember station type to understand special data format
-						hexFormat  = controller.special && controller.special.hasOwnProperty( id ) ? controller.special[ id ].st : 0;
+						data = controller.special && controller.special.hasOwnProperty( id ) ? controller.special[ id ].sd : "",
+						type  = controller.special && controller.special.hasOwnProperty( id ) ? controller.special[ id ].st : 0;
 
 					opts.empty();
 
-					if ( value === 1 ) {
+					if ( value === 0 ) {
+						opts.append(
+							"<p class='special-desc center small'>" +
+								_( "Select the station type using the dropdown selector above and configure the station properties." ) +
+							"</p>"
+						).enhanceWithin();
+					} else if ( value === 1 ) {
+						data = ( type === value ) ? data : "0000000000000000";
+
 						opts.append(
 							"<div class='ui-bar-a ui-bar'>" + _( "RF Code" ) + ":</div>" +
-							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='rf-code' type='text' value='" + hex + "'>"
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='rf-code' required='true' type='text' value='" + data + "'>"
 						).enhanceWithin();
 					} else if ( value === 2 ) {
-						var data = parseRemoteStationData( hex );
+						data = parseRemoteStationData( ( type === value ) ? data : "00000000005000" );
 
 						opts.append(
 							"<div class='ui-bar-a ui-bar'>" + _( "Remote Address" ) + ":</div>" +
-							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='remote-address' pattern='^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$' type='text' value='" + data.ip + "'>" +
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='remote-address' required='true' type='text' pattern='^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$' value='" + data.ip + "'>" +
 							"<div class='ui-bar-a ui-bar'>" + _( "Remote Port" ) + ":</div>" +
-							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='remote-port' type='number' placeholder='80' min='0' max='65535' value='" + data.port + "'>" +
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='remote-port' required='true' type='number' placeholder='80' min='0' max='65535' value='" + data.port + "'>" +
 							"<div class='ui-bar-a ui-bar'>" + _( "Remote Station (index)" ) + ":</div>" +
-							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='remote-station' type='number' min='1' max='48' placeholder='1' value='" + ( data.station + 1 ) + "'>"
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='remote-station' required='true' type='number' min='1' max='48' placeholder='1' value='" + ( data.station + 1 ) + "'>"
 						).enhanceWithin();
 					} else if ( value === 3 ) {
 
 						// Extended special station model to support GPIO stations
-						// GPIO pins available RPi R2.
+						// Special data for GPIO Station is three bytes of ascii decimal (not hex)
+						// First two bytes are zero padded GPIO pin number (default GPIO05)
+						// Third byte is either 0 or 1 for active low (GND) or high (+5V) relays (default 1 for HIGH)
+						// Restrict selection to GPIO pins available on the RPi R2.
 						var ospiPins = [ 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 18, 19, 20, 21, 23, 24, 25, 26 ];
-						var gpioPin, activeState, uiStr;
+						var gpioPin = 5, activeState = 1, sel;
 
-						// Ignore any stored special data unless it is for the GPIO station type
-						if ( hexFormat === value ) {
-
-							// Special data for GPIO Station is three bytes of ascii decimal (not hex)
-							hex = hex.split( "" );
-
-							// First two bytes are zero padded GPIO pin number (default GPIO05)
-							gpioPin = parseInt( hex[ 0 ] + hex[ 1 ] );
-
-							// Third byte is either 0 or 1 for active low (GND) or high (+5V) relays (default 1 for HIGH)
-							activeState = parseInt( hex[ 2 ] );
+						if ( type === value ) {
+							data = data.split( "" );
+							gpioPin = parseInt( data[ 0 ] + data[ 1 ] );
+							activeState = parseInt( data[ 2 ] );
 						}
 
-						// Set up GPIO selection based on available OSPi pins
-						uiStr = "<div class='ui-bar-a ui-bar'>" + _( "GPIO Pin" ) + ":</div>" +
+						sel = "<div class='ui-bar-a ui-bar'>" + _( "GPIO Pin" ) + ":</div>" +
 							    "<select class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='gpio-pin'>";
 						for ( var i = 0; i < ospiPins.length; i++ ) {
-							uiStr += "<option value='" + ospiPins[ i ] + "' " + ( ospiPins[ i ] === gpioPin ? "selected='selected'" : "" ) + ">" + ospiPins[ i ];
+							sel += "<option value='" + ospiPins[ i ] + "' " + ( ospiPins[ i ] === gpioPin ? "selected='selected'" : "" ) + ">" + ospiPins[ i ];
 						}
-						uiStr += "</select>";
+						sel += "</select>";
 
-						// Set up active state selection (High or LOW)
-						uiStr += "<div class='ui-bar-a ui-bar'>" + _( "Active State" ) + ":</div>" +
+						sel += "<div class='ui-bar-a ui-bar'>" + _( "Active State" ) + ":</div>" +
 							     "<select class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='active-state'>" +
 									"<option value='1' " + ( activeState === 1 ? "selected='selected'" : "" ) + ">" + _( "HIGH" ) +
 									"<option value='0' " + ( activeState === 0 ? "selected='selected'" : "" ) + ">" + _( "LOW" ) +
 							     "</select>";
 
-						opts.append( uiStr ).enhanceWithin();
+						opts.append( sel ).enhanceWithin();
+					} else if ( value === 4 ) {
+						data = ( type === value ) ? data.split( "," ) : [ "server", "80", "On", "Off" ];
+
+						opts.append(
+							"<div class='ui-bar-a ui-bar'>" + _( "Server Name" ) + ":</div>" +
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='http-server' required='true' type='text' value='" + data[ 0 ] + "'>" +
+							"<div class='ui-bar-a ui-bar'>" + _( "Server Port" ) + ":</div>" +
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='http-port' required='true' type='number' min='0' max='65535' value='" + parseInt( data[ 1 ] ) + "'>" +
+							"<div class='ui-bar-a ui-bar'>" + _( "On Command" ) + ":</div>" +
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='http-on' required='true' type='text' value='" + data[ 2 ] + "'>" +
+							"<div class='ui-bar-a ui-bar'>" + _( "Off Command" ) + ":</div>" +
+							"<input class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='http-off' required='true' type='text' value='" + data[ 3 ] + "'>"
+						).enhanceWithin();
 					}
                 },
                 saveChanges = function( checkPassed ) {
-                    var hs = select.find( "#hs" ).data( "value" );
+					var hs = parseInt( select.find( "#hs" ).val() );
                     button.data( "hs", hs );
 
                     if ( hs === 1 ) {
@@ -4774,11 +4807,15 @@ var showHome = ( function() {
 
 						button.data( "specialData", hex );
 					} else if ( hs === 3 ) {
-
-						// Handle GPIO Station special data. Use default GPIO05 and active High
 						var sd = pad( select.find( "#gpio-pin" ).val() || "05" );
 						sd += select.find( "#active-state" ).val() || "1";
 						button.data( "specialData", sd );
+					} else if ( hs === 4 ) {
+						var sdata = select.find( "#http-server" ).val();
+						sdata += "," + select.find( "#http-port" ).val();
+						sdata += "," + select.find( "#http-on" ).val();
+						sdata += "," + select.find( "#http-off" ).val();
+						button.data( "specialData", sdata );
                     }
 
                     button.data( "um", select.find( "#um" ).is( ":checked" ) ? 1 : 0 );
@@ -4797,11 +4834,22 @@ var showHome = ( function() {
                     select.popup( "destroy" ).remove();
                 },
                 select = "<div data-overlay-theme='b' data-role='popup' data-theme='a' id='stn_attrib'>" +
-					"<fieldset style='margin:0' data-mini='true' data-corners='false' data-role='controlgroup'><form>";
+					"<fieldset style='margin:0' data-mini='true' data-corners='false' data-role='controlgroup'><form><div id='station-tabs'>";
 
             if ( typeof id !== "number" ) {
                 return false;
             }
+
+			// Setup two tabs for station configuration (Basic / Advanced) when applicable
+			if ( hasSpecial ) {
+				select += "<ul class='tabs'>" +
+								"<li class='current' data-tab='tab-basic'>Basic</li>" +
+								"<li data-tab='tab-advanced'>Advanced</li>" +
+							"</ul>";
+			}
+
+			// Start of Basic Tab settings
+			select += "<div id='tab-basic' class='tab-content current'>";
 
             select += "<div class='ui-bar-a ui-bar'>" + _( "Station Name" ) + ":</div>" +
 				"<input class='bold center' data-corners='false' data-wrapper-class='tight stn-name ui-btn' id='stn-name' type='text' value='" +
@@ -4857,51 +4905,67 @@ var showHome = ( function() {
                 }
             }
 
-            if ( hasSpecial ) {
-                select += "<div class='ui-bar-a ui-bar'>" + _( "Station Type" ) + ":</div>" +
-	                "<fieldset data-role='controlgroup' data-type='horizontal' data-corners='false' style='width:100%;margin:0' data-value='0' id='hs'" + ( isStationSpecial( id ) ? " class='ui-disabled'" : "" ) + ">" +
-					    "<button data-hs='0'" + ( isStationSpecial( id ) ? "" : " class='ui-btn-active'" ) + ">" + _( "Standard" ) + "</button>" +
-					    "<button data-hs='1'>" + _( "RF" ) + "</button>" +
-						"<button data-hs='2'>" + _( "Remote" ) + "</button>" +
-
-						// Expose UI for GPIO Station settings
-			    		"<button data-hs='3' style='border-bottom-width:0!important'" + ( checkOSVersion( 2162 ) && ( getHWVersion() === "OSPi" ) ? ">" : " disabled='disabled'>" ) + _( "GPIO" ) + "</button>" +
-					"</fieldset>" +
-					"<div id='specialOpts'></div>";
-            }
-
             select += "<div class='ui-bar-a ui-bar'>" + _( "Station Notes" ) + ":</div>" +
 				"<textarea data-corners='false' class='tight stn-notes' id='stn-notes'>" +
 					( sites[ currentSite ].notes[ id ] ? sites[ currentSite ].notes[ id ] : "" ) +
 				"</textarea>";
 
+			select += "</div>";
+
+			// Start of Advanced Tab settings. Initially set to disabled until we have refreshed station data from firmware
+            if ( hasSpecial ) {
+				select += "<div id='tab-advanced' class='tab-content'>" +
+					"<div class='ui-bar-a ui-bar'>" + _( "Station Type" ) + ":</div>" +
+						"<select data-mini='true' id='hs'"  + ( isStationSpecial( id ) ? " class='ui-disabled'" : "" ) + ">" +
+							"<option data-hs='0' value='0'" + ( isStationSpecial( id ) ? "" : "selected" ) + ">" + _( "Standard" ) + "</option>" +
+							"<option data-hs='1' value='1'>" + _( "RF" ) + "</option>" +
+							"<option data-hs='2' value='2'>" + _( "Remote" ) + "</option>" +
+							"<option data-hs='3' value='3'" + ( checkOSVersion( 2162 ) && ( getHWVersion() === "OSPi" ) ? ">" : " disabled>" ) + _( "GPIO" ) + "</option>" +
+							"<option data-hs='4' value='4'" + ( checkOSVersion( 217 ) && ( getHWVersion() === "OSPi" ) ? ">" : " disabled>" ) + _( "HTTP" ) + "</option>" +
+						"</select>" +
+						"<div id='specialOpts'></div>" +
+					"</div>" +
+				"</div>";
+			}
+
+			// Common Submit button
             select += "<input data-wrapper-class='attrib-submit' data-theme='b' type='submit' value='" + _( "Submit" ) + "' /></form></fieldset></div>";
+
             select = $( select ).enhanceWithin().on( "submit", "form", function() {
                 saveChanges( id );
-
                 return false;
             } );
 
-            select.find( "#hs" ).on( "click", "button", function() {
-				var button = $( this ),
-					value = button.data( "hs" ),
-					buttons = button.siblings();
+			// Display the selected tab when clicked
+			select.find( "ul.tabs li" ).click( function() {
+				var tabId = $( this ).attr( "data-tab" );
 
-				buttons.removeClass( "ui-btn-active" );
-				button.addClass( "ui-btn-active" );
-				button.parents( "#hs" ).data( "value", value );
+				$( "ul.tabs li" ).removeClass( "current" );
+				$( ".tab-content" ).removeClass( "current" );
 
+				$( this ).addClass( "current" );
+				$( "#" + tabId ).addClass( "current" );
+			} );
+
+			// Update Advanced tab whenever a new special station type is selected
+            select.find( "#hs" ).on( "change", function() {
+				var value = parseInt( $( this ).val() );
 				showSpecialOptions( value );
-
 				return false;
             } );
 
+			// Refresh station data from firmware and update the Advanced tab to reflect special station type
 			if ( isStationSpecial( id ) ) {
 				updateControllerStationSpecial( function() {
 					select.find( "#hs" )
 						.removeClass( "ui-disabled" )
-						.find( "button[data-hs='" + controller.special[ id ].st + "']" ).click();
+						.find( "option[data-hs='" + controller.special[ id ].st + "']" ).prop( "selected", true );
+					select.find( "#hs" ).change();
 				} );
+			} else {
+				select.find( "#hs" ).removeClass( "ui-disabled" );
+				select.find( "option[data-hs='0']" ).prop( "selected", true );
+				select.find( "#hs" ).change();
 			}
 
             select.find( ".changeBackground" ).on( "click", function( e ) {
@@ -5219,6 +5283,9 @@ var showHome = ( function() {
 	            if ( typeof sites[ currentSite ].notes !== "object" ) {
 					sites[ currentSite ].notes = {};
 	            }
+	            if ( typeof sites[ currentSite ].lastRunTime !== "object" ) {
+					sites[ currentSite ].lastRunTime = {};
+	            }
 
 	            callback();
 			} );
@@ -5297,6 +5364,7 @@ var showHome = ( function() {
 	                    title: name,
 	                    incrementalUpdate: false,
 	                    maximum: 65535,
+	                    seconds: sites[ currentSite ].lastRunTime[ station ] > 0 ? sites[ currentSite ].lastRunTime[ station ] : 0,
 	                    helptext: _( "Enter a duration to manually run " + name ),
 	                    callback: function( duration ) {
 	                        sendToOS( "/cm?sid=" + station + "&en=1&t=" + duration + "&pw=", "json" ).done( function() {
@@ -5307,6 +5375,10 @@ var showHome = ( function() {
 
 	                            refreshStatus();
 	                            showerror( _( "Station has been queued" ) );
+
+	                            // Save run time for this station
+						        sites[ currentSite ].lastRunTime[ station ] = duration;
+						        storage.set( { "sites": JSON.stringify( sites ) }, cloudSaveSites );
 	                        } );
 	                    }
 	                } );
@@ -7227,7 +7299,7 @@ var getLogs = ( function() {
 
                     sortedData.push( {
                         "start": utc,
-                        "end": new Date( utc.getTime() + duration ),
+                        "end": new Date( utc.getTime() + ( duration * 1000 ) ),
                         "className": className,
                         "content": name,
                         "pid": pid - 1,
@@ -9214,7 +9286,7 @@ var showAbout = ( function() {
                     "</li>" +
                 "</ul>" +
                 "<p class='smaller'>" +
-                    _( "App Version" ) + ": 1.4.11" +
+                    _( "App Version" ) + ": 1.5.0" +
                     "<br>" + _( "Firmware" ) + ": <span class='firmware'></span>" +
                     "<br><span class='hardwareLabel'>" + _( "Hardware Version" ) + ":</span> <span class='hardware'></span>" +
                 "</p>" +
