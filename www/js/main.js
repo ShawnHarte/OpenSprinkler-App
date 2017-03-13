@@ -121,10 +121,18 @@ var isIEMobile = /IEMobile/.test( navigator.userAgent ),
     curr183, currIp, currPrefix, currAuth, currPass, currAuthUser,
     currAuthPass, currLocal, currLang, language, deviceip, errorTimeout, weather, weatherKeyFail, openPanel;
 
+// Prevent errors from bubbling up on Windows
+if ( isWinApp ) {
+    $( window ).on( "error", function( msg, url, line ) {
+        window.console.log( msg, url, line );
+        return true;
+    } );
+}
+
 // Redirect jQuery Mobile DOM manipulation to prevent error
 if ( window.MSApp ) {
 
-	if ( window.Windows && Windows.UI && Windows.UI.ApplicationSettings ) {
+	if ( window.Windows && Windows.UI && Windows.UI.ApplicationSettings && Windows.UI.ApplicationSettings.SettingsPane ) {
 
 	    // Add link to privacy statement
 	    var settingsPane = Windows.UI.ApplicationSettings.SettingsPane.getForCurrentView();
@@ -141,17 +149,20 @@ if ( window.MSApp ) {
 	    } );
 	}
 
-    // Cache the old domManip function.
-    $.fn.oldDomManIp = $.fn.domManip;
+	if ( MSApp.execUnsafeLocalFunction ) {
 
-    // Override the domManip function with a call to the cached
-    // domManip function wrapped in a MSapp.execUnsafeLocalFunction call.
-    $.fn.domManip = function( args, callback, allowIntersection ) {
-        var that = this;
-        return MSApp.execUnsafeLocalFunction( function() {
-            return that.oldDomManIp( args, callback, allowIntersection );
-        } );
-    };
+	    // Cache the old domManip function.
+	    $.fn.oldDomManIp = $.fn.domManip;
+
+	    // Override the domManip function with a call to the cached
+	    // domManip function wrapped in a MSapp.execUnsafeLocalFunction call.
+	    $.fn.domManip = function( args, callback, allowIntersection ) {
+	        var that = this;
+	        return MSApp.execUnsafeLocalFunction( function() {
+	            return that.oldDomManIp( args, callback, allowIntersection );
+	        } );
+	    };
+	}
 }
 
 $( document )
@@ -3567,7 +3578,8 @@ function showOptions( expandItem ) {
                 isPi = isOSPi(),
                 button = header.eq( 2 ),
                 keyNames = { 1:"tz", 2:"ntp", 12:"htp", 13:"htp2", 14:"ar", 15:"nbrd", 16:"seq", 17:"sdt", 18:"mas", 19:"mton", 20:"mtoff",
-					21:"urs", 22:"rst", 23:"wl", 25:"ipas", 30:"rlp", 36:"lg", 31:"uwt", 37:"mas2", 38:"mton2", 39:"mtof2", 41:"fpr0", 42:"fpr1", 43:"etmn", 44:"etmx" },
+					21:"urs", 22:"rst", 23:"wl", 25:"ipas", 30:"rlp", 36:"lg", 31:"uwt", 37:"mas2", 38:"mton2", 39:"mtof2", 41:"fpr0", 42:"fpr1",
+					48: "sar", 49: "ife", 50:"etmn", 51:"etmx" },
                 key;
 
             button.prop( "disabled", true );
@@ -3632,6 +3644,21 @@ function showOptions( expandItem ) {
                         opt.o11 = ip[ 3 ];
 
                         return true;
+                    case "dns":
+                        ip = data.split( "." );
+
+                        if ( ip === "0.0.0.0" ) {
+                            showerror( _( "A valid DNS address is required when DHCP is not used" ) );
+                            invalid = true;
+                            return false;
+                        }
+
+                        opt.o44 = ip[ 0 ];
+                        opt.o45 = ip[ 1 ];
+                        opt.o46 = ip[ 2 ];
+                        opt.o47 = ip[ 3 ];
+
+                        return true;
                     case "ntp_addr":
                         ip = data.split( "." );
 
@@ -3687,6 +3714,7 @@ function showOptions( expandItem ) {
                     case "o22":
                     case "o25":
                     case "o36":
+                    case "o48":
                     case "o3":
                         data = $item.is( ":checked" ) ? 1 : 0;
                         if ( !data ) {
@@ -3812,14 +3840,14 @@ function showOptions( expandItem ) {
         if ( typeof controller.options.mton !== "undefined" ) {
             list += "<div " + ( controller.options.mas === 0 ? "style='display:none' " : "" ) +
 				"class='ui-field-no-border ui-field-contain duration-field'><label for='o19'>" +
-					_( "Master On Delay" ) +
+					_( "Master On Adjustment" ) +
 				"</label><button data-mini='true' id='o19' value='" + controller.options.mton + "'>" + controller.options.mton + "s</button></div>";
         }
 
         if ( typeof controller.options.mtof !== "undefined" ) {
             list += "<div " + ( controller.options.mas === 0 ? "style='display:none' " : "" ) +
 				"class='ui-field-no-border ui-field-contain duration-field'><label for='o20'>" +
-					_( "Master Off Delay" ) +
+					_( "Master Off Adjustment" ) +
 				"</label><button data-mini='true' id='o20' value='" + controller.options.mtof + "'>" + controller.options.mtof + "s</button></div>";
         }
     }
@@ -3972,9 +4000,13 @@ function showOptions( expandItem ) {
 				        "<label for='o21-rain'>" + _( "Rain" ) + "</label>" +
 				        "<input class='noselect' type='radio' name='o21' id='o21-flow' value='2'" + ( controller.options.urs === 2 ? " checked='checked'" : "" ) + ">" +
 				        "<label for='o21-flow'>" + _( "Flow" ) + "</label>" +
+				        ( checkOSVersion( 217 ) ? "<input class='noselect' type='radio' name='o21' id='o21-program' value='240'" + ( controller.options.urs === 240 ? " checked='checked'" : "" ) + ">" +
+				        	"<label for='o21-program'>" + _( "Program Switch" ) + "</label>" : "" ) +
 				    "</fieldset>" +
-				"</div>";
-
+				"</div>" +
+				( checkOSVersion( 217 ) ? "<label id='prgswitch' class='center smaller" + ( controller.options.urs === 240 ? "" : " hidden" ) + "'>" +
+					_( "When using program switch, a switch is connected to the sensor port to trigger Program 1 every time the switch is pressed for at least 1 second." ) +
+				"</label>" : "" );
 		} else {
 	        list += "<label for='o21'>" +
 				"<input data-mini='true' id='o21' type='checkbox' " + ( ( controller.options.urs === 1 ) ? "checked='checked'" : "" ) + ">" +
@@ -4007,6 +4039,25 @@ function showOptions( expandItem ) {
 	            "</tr>" +
 	        "</table></div>";
     }
+
+    if ( typeof controller.settings.ifkey !== "undefined" ) {
+	    list += "</fieldset><fieldset data-role='collapsible'" +
+			( typeof expandItem === "string" && expandItem === "integrations" ? " data-collapsed='false'" : "" ) + ">" +
+			"<legend>" + _( "Integrations" ) + "</legend>";
+
+        list += "<div class='ui-field-contain'><label for='ifkey'>" + _( "IFTTT Key" ) +
+	        "<button data-helptext='" +
+				_( "To enable IFTTT, a Maker channel key is required which can be obtained from https://ifttt.com" ) +
+				"' class='help-icon btn-no-border ui-btn ui-icon-info ui-btn-icon-notext'></button>" +
+		"</label><input autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' data-mini='true' type='text' id='ifkey' value='" + controller.settings.ifkey + "'>" +
+		"</div>";
+
+        list += "<div class='ui-field-contain'><label for='o49'>" + _( "IFTTT Events" ) +
+				"<button data-helptext='" +
+					_( "Select which events to send to IFTTT for use in recipes." ) +
+					"' class='help-icon btn-no-border ui-btn ui-icon-info ui-btn-icon-notext'></button>" +
+			"</label><button data-mini='true' id='o49' value='" + controller.options.ife + "'>Configure Events</button></div>";
+	}
 
     list += "</fieldset><fieldset class='full-width-slider' data-role='collapsible'" +
 		( typeof expandItem === "string" && expandItem === "lcd" ? " data-collapsed='false'" : "" ) + ">" +
@@ -4075,6 +4126,13 @@ function showOptions( expandItem ) {
 			_( "IP Address" ) + "</label><button data-mini='true' id='ip_addr' value='" + ip + "'>" + ip + "</button></div>";
         list += "<div class='" + ( ( controller.options.dhcp === 1 ) ? "hidden " : "" ) + "ui-field-contain duration-field'><label for='gateway'>" +
 			_( "Gateway Address" ) + "</label><button data-mini='true' id='gateway' value='" + gw + "'>" + gw + "</button></div>";
+
+        if ( controller.options.dns1 ) {
+            var dns = [ controller.options.dns1, controller.options.dns2, controller.options.dns3, controller.options.dns4 ].join( "." );
+	        list += "<div class='" + ( ( controller.options.dhcp === 1 ) ? "hidden " : "" ) + "ui-field-contain duration-field'><label for='dns'>" +
+				_( "DNS Address" ) + "</label><button data-mini='true' id='dns' value='" + dns + "'>" + dns + "</button></div>";
+        }
+
         list += "<label for='o3'><input data-mini='true' id='o3' type='checkbox' " + ( ( controller.options.dhcp === 1 ) ? "checked='checked'" : "" ) + ">" +
 			_( "Use DHCP (restart required)" ) + "</label>";
     }
@@ -4092,6 +4150,11 @@ function showOptions( expandItem ) {
     if ( typeof controller.options.ipas !== "undefined" ) {
         list += "<label for='o25'><input data-mini='true' id='o25' type='checkbox' " + ( ( controller.options.ipas === 1 ) ? "checked='checked'" : "" ) + ">" +
 			_( "Ignore Password" ) + "</label>";
+    }
+
+    if ( typeof controller.options.sar !== "undefined" ) {
+        list += "<label for='o48'><input data-mini='true' id='o48' type='checkbox' " + ( ( controller.options.sar === 1 ) ? "checked='checked'" : "" ) + ">" +
+			_( "Special Station Auto-Refresh" ) + "</label>";
     }
 
     list += "</fieldset><fieldset data-role='collapsible' data-theme='b'" +
@@ -4268,7 +4331,7 @@ function showOptions( expandItem ) {
     page.find( "#o3" ).on( "change", function() {
         var button = $( this ),
             checked = button.is( ":checked" ),
-            manualInputs = page.find( "#ip_addr,#gateway" ).parents( ".ui-field-contain" );
+            manualInputs = page.find( "#ip_addr,#gateway,#dns" ).parents( ".ui-field-contain" );
 
         if ( checked ) {
             manualInputs.addClass( "hidden" );
@@ -4291,6 +4354,12 @@ function showOptions( expandItem ) {
             page.find( "#o41" ).parents( ".ui-field-contain" ).removeClass( "hidden" );
         } else {
             page.find( "#o41" ).parents( ".ui-field-contain" ).addClass( "hidden" );
+        }
+
+        if ( button.val() === "240" ) {
+            page.find( "#prgswitch" ).removeClass( "hidden" );
+        } else {
+            page.find( "#prgswitch" ).addClass( "hidden" );
         }
     } );
 
@@ -4324,7 +4393,7 @@ function showOptions( expandItem ) {
         header.eq( 2 ).prop( "disabled", false );
         page.find( ".submit" ).addClass( "hasChanges" );
 
-        if ( id === "ip_addr" || id === "gateway" || id === "ntp_addr" ) {
+        if ( id === "ip_addr" || id === "gateway" || id === "dns" || id === "ntp_addr" ) {
             showIPRequest( {
                 title: name,
                 ip: dur.val().split( "." ),
@@ -4362,7 +4431,7 @@ function showOptions( expandItem ) {
                     dur.val( result ).text( result + "s" );
                 },
                 label: _( "Seconds" ),
-                maximum: 60,
+                maximum: checkOSVersion( 217 ) ? 0 : 60,
                 minimum: -60,
                 helptext: helptext
             } );
@@ -4389,9 +4458,15 @@ function showOptions( expandItem ) {
                 max = 3540;
             }
 
-            showDurationBox( {
-                seconds: dur.val(),
+            if ( checkOSVersion( 217 ) ) {
+                min = -600;
+                max = 600;
+            }
+
+            showSingleDurationInput( {
+                data: dur.val(),
                 title: name,
+                label: _( "Seconds" ),
                 callback: function( result ) {
                     dur.val( result );
                     dur.text( dhms2str( sec2dhms( result ) ) );
@@ -4444,6 +4519,51 @@ function showOptions( expandItem ) {
         } else {
             page.find( "#o31,#weatherRestriction" ).selectmenu( "enable" );
         }
+    } );
+
+    page.find( "#o49" ).on( "click", function() {
+		var events = {
+			program: _( "Program Start" ),
+			rain: _( "Rain Sensor Update" ),
+			flow: _( "Flow Sensor Update" ),
+			weather: _( "Weather Adjustment Update" ),
+			reboot: _( "Controller Reboot" ),
+			run: _( "Station Run" )
+		}, button = this, curr = parseInt( button.value ), inputs = "", a = 0, ife = 0;
+
+	    $.each( events, function( i, val ) {
+			inputs += "<label for='ifttt-" + i + "'><input class='needsclick' data-iconpos='right' id='ifttt-" + i + "' type='checkbox' " +
+				( getBitFromByte( curr, a ) ? "checked='checked'" : "" ) + ">" + val +
+			"</label>";
+			a++;
+	    } );
+
+	    var popup = $(
+	        "<div data-role='popup' data-theme='a'>" +
+	            "<div data-role='controlgroup' data-mini='true' class='tight'>" +
+		            "<div class='ui-bar ui-bar-a'>" + _( "Select IFTTT Events" ) + "</div>" +
+						inputs +
+					"<input data-wrapper-class='attrib-submit' class='submit' data-theme='b' type='submit' value='" + _( "Submit" ) + "' />" +
+	            "</div>" +
+	        "</div>" );
+
+	    popup.find( ".submit" ).on( "click", function() {
+			a = 0;
+		    $.each( events, function( i ) {
+				ife |= popup.find( "#ifttt-" + i ).is( ":checked" ) << a;
+				a++;
+		    } );
+			popup.popup( "close" );
+		    if ( curr === ife ) {
+				return;
+		    } else {
+				button.value = ife;
+				header.eq( 2 ).prop( "disabled", false );
+				page.find( ".submit" ).addClass( "hasChanges" );
+		    }
+	    } );
+
+	    openPopup( popup );
     } );
 
     page.find( ".datetime-input" ).on( "click", function() {
@@ -4688,8 +4808,13 @@ var showHome = ( function() {
 						// First two bytes are zero padded GPIO pin number (default GPIO05)
 						// Third byte is either 0 or 1 for active low (GND) or high (+5V) relays (default 1 for HIGH)
 						// Restrict selection to GPIO pins available on the RPi R2.
-						var ospiPins = [ 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 18, 19, 20, 21, 23, 24, 25, 26 ];
-						var gpioPin = 5, activeState = 1, sel;
+						var gpioPin = 5, activeState = 1, freePins, sel;
+
+                        if ( getHWVersion() === "OSPi" ) {
+                            freePins = [ 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 18, 19, 20, 21, 23, 24, 25, 26 ];
+                        } else if ( getHWVersion() === "2.3" ) {
+                            freePins = [ 2, 10, 12, 13, 14, 15, 18, 19 ];
+                        }
 
 						if ( type === value ) {
 							data = data.split( "" );
@@ -4699,8 +4824,8 @@ var showHome = ( function() {
 
 						sel = "<div class='ui-bar-a ui-bar'>" + _( "GPIO Pin" ) + ":</div>" +
 							    "<select class='center' data-corners='false' data-wrapper-class='tight ui-btn stn-name' id='gpio-pin'>";
-						for ( var i = 0; i < ospiPins.length; i++ ) {
-							sel += "<option value='" + ospiPins[ i ] + "' " + ( ospiPins[ i ] === gpioPin ? "selected='selected'" : "" ) + ">" + ospiPins[ i ];
+						for ( var i = 0; i < freePins.length; i++ ) {
+							sel += "<option value='" + freePins[ i ] + "' " + ( freePins[ i ] === gpioPin ? "selected='selected'" : "" ) + ">" + freePins[ i ];
 						}
 						sel += "</select>";
 
@@ -4920,8 +5045,8 @@ var showHome = ( function() {
 							"<option data-hs='0' value='0'" + ( isStationSpecial( id ) ? "" : "selected" ) + ">" + _( "Standard" ) + "</option>" +
 							"<option data-hs='1' value='1'>" + _( "RF" ) + "</option>" +
 							"<option data-hs='2' value='2'>" + _( "Remote" ) + "</option>" +
-							"<option data-hs='3' value='3'" + ( checkOSVersion( 2162 ) && ( getHWVersion() === "OSPi" ) ? ">" : " disabled>" ) + _( "GPIO" ) + "</option>" +
-							"<option data-hs='4' value='4'" + ( checkOSVersion( 217 ) && ( getHWVersion() === "OSPi" ) ? ">" : " disabled>" ) + _( "HTTP" ) + "</option>" +
+							"<option data-hs='3' value='3'" + ( checkOSVersion( 217 ) ? ">" : " disabled>" ) + _( "GPIO" ) + "</option>" +
+							"<option data-hs='4' value='4'" + ( checkOSVersion( 217 ) ? ">" : " disabled>" ) + _( "HTTP" ) + "</option>" +
 						"</select>" +
 						"<div id='specialOpts'></div>" +
 					"</div>" +
@@ -8884,7 +9009,7 @@ function getExportMethod() {
     if ( isFileCapable ) {
         popup.find( ".fileMethod" ).removeClass( "hidden" ).attr( {
             href: "data:text/json;charset=utf-8," + obj,
-            download: "backup.json"
+            download: "backup-" + new Date().toLocaleDateString().replace( /\//g, "-" ) + ".json"
         } ).on( "click", function() {
             popup.popup( "close" );
         } );
@@ -9008,7 +9133,8 @@ function importConfig( data ) {
 			21:"urs", 22:"rst", 23:"wl", 25:"ipas", 30:"rlp", 36:"lg" },
         keyIndex = { "tz":1, "ntp":2, "dhcp":3, "hp0":12, "hp1":13, "ar":14, "ext":15, "seq":16, "sdt":17, "mas":18, "mton":19,
 			"mtof":20, "urs":21, "rso":22, "wl":23, "ipas":25, "devid":26, "con": 27, "lit": 28, "dim": 29, "rlp":30, "lg":36,
-			"uwt":31, "ntp1":32, "ntp2":33, "ntp3":34, "ntp4":35, "mas2":37, "mton2":38, "mtof2":39, "fpr0":41, "fpr1":42, "re":43 },
+			"uwt":31, "ntp1":32, "ntp2":33, "ntp3":34, "ntp4":35, "mas2":37, "mton2":38, "mtof2":39, "fpr0":41, "fpr1":42, "re":43,
+			"dns1": 44, "dns2": 45, "dns3": 46, "dns4": 47, "sar": 48, "ife": 49, "etmn": 50, "etmx": 51 },
         warning = "";
 
     if ( typeof data !== "object" || !data.settings ) {
@@ -9259,7 +9385,7 @@ var showAbout = ( function() {
                 "<ul data-role='listview' data-inset='true'>" +
                     "<li>" +
                         "<p>" + _( "User manual for OpenSprinkler is available at" ) +
-							" <a class='iab' target='_blank' href='https://opensprinkler.freshdesk.com/support/solutions/folders/5000147083'>" +
+							" <a class='iab' target='_blank' href='https://openthings.freshdesk.com/support/solutions/folders/5000147083'>" +
 								"https://support.opensprinkler.com" +
 							"</a>" +
 						"</p>" +
@@ -9286,7 +9412,7 @@ var showAbout = ( function() {
                     "</li>" +
                 "</ul>" +
                 "<p class='smaller'>" +
-                    _( "App Version" ) + ": 1.5.0" +
+                    _( "App Version" ) + ": 1.6.0" +
                     "<br>" + _( "Firmware" ) + ": <span class='firmware'></span>" +
                     "<br><span class='hardwareLabel'>" + _( "Hardware Version" ) + ":</span> <span class='hardware'></span>" +
                 "</p>" +
@@ -9908,7 +10034,7 @@ function showUnifiedFirmwareNotification() {
 		        title: _( "Unified firmware is now avaialble" ),
 		        desc: _( "Click here for more details" ),
 		        on: function() {
-		            var iab = window.open( "https://opensprinkler.freshdesk.com/support/solutions/articles/5000631599",
+		            var iab = window.open( "https://openthings.freshdesk.com/support/solutions/articles/5000631599",
 						"_blank", "location=" + ( isAndroid ? "yes" : "no" ) +
 						",enableViewportScale=yes,toolbarposition=top,closebuttoncaption=" + _( "Back" ) );
 
@@ -9953,7 +10079,7 @@ function checkPublicAccess( eip ) {
                         title: _( "Remote access is not enabled" ),
                         desc: _( "Click here to troubleshoot remote access issues" ),
                         on: function() {
-                            var iab = window.open( "https://opensprinkler.freshdesk.com/support/solutions/articles/5000569763",
+                            var iab = window.open( "https://openthings.freshdesk.com/support/solutions/articles/5000569763",
 								"_blank", "location=" + ( isAndroid ? "yes" : "no" ) +
 								",enableViewportScale=yes,toolbarposition=top,closebuttoncaption=" + _( "Back" ) );
 
@@ -10209,7 +10335,7 @@ function checkFirmwareUpdate() {
 											function() {
 											    $.mobile.loading( "show", {
 											        html: "<div class='center'>" + _( "Update did not complete." ) + "<br>" +
-														"<a class='iab ui-btn' href='https://opensprinkler.freshdesk.com/support/solutions/articles/5000631599-installing-and-updating-the-unified-firmware#upgrade'>" + _( "Update Guide" ) + "</a></div>",
+														"<a class='iab ui-btn' href='https://openthings.freshdesk.com/support/solutions/articles/5000631599-installing-and-updating-the-unified-firmware#upgrade'>" + _( "Update Guide" ) + "</a></div>",
 											        textVisible: true,
 											        theme: "b"
 											    } );
@@ -10219,8 +10345,8 @@ function checkFirmwareUpdate() {
 									} else {
 
 										var url = controller.options.hwv > 63 ?
-											"https://opensprinkler.freshdesk.com/support/solutions/articles/5000631599-installing-and-updating-the-unified-firmware#upgrade"
-											: "https://opensprinkler.freshdesk.com/support/solutions/articles/5000381694-opensprinkler-firmware-update-guide";
+											"https://openthings.freshdesk.com/support/solutions/articles/5000631599-installing-and-updating-the-unified-firmware#upgrade"
+											: "https://openthings.freshdesk.com/support/solutions/articles/5000381694-opensprinkler-firmware-update-guide";
 
 	                                    // Open the firmware upgrade guide in a child browser
 	                                    $( "<a class='hidden iab' href='" + url + "'></a>" )
@@ -10536,6 +10662,10 @@ function showDurationBox( opt ) {
         opt.seconds = 0;
     }
 
+    if ( checkOSVersion( 217 ) ) {
+		opt.preventCompression = true;
+    }
+
     var keys = [ "days", "hours", "minutes", "seconds" ],
         text = [ _( "Days" ), _( "Hours" ), _( "Minutes" ), _( "Seconds" ) ],
         conv = [ 86400, 3600, 60, 1 ],
@@ -10779,6 +10909,9 @@ function showSingleDurationInput( opt ) {
             "</div>" +
         "</div>" ),
         input = popup.find( "input" ),
+        reply = function( val ) {
+			opt.callback( parseInt( val ).clamp( opt.minimum, opt.maximum ) );
+        },
         changeValue = function( dir ) {
             var val = parseInt( input.val() );
 
@@ -10788,7 +10921,7 @@ function showSingleDurationInput( opt ) {
 
             input.val( val + dir );
             if ( opt.updateOnChange ) {
-                opt.callback( val + dir );
+                reply( val + dir );
             }
         };
 
@@ -10810,14 +10943,14 @@ function showSingleDurationInput( opt ) {
     } );
 
     popup.find( "input[type='submit']" ).on( "click", function() {
-        opt.callback( input.val() );
+        reply( input.val() );
         popup.popup( "destroy" ).remove();
     } );
 
     popup
     .one( "popupafterclose", function() {
         if ( opt.updateOnChange ) {
-            opt.callback( input.val() );
+            reply( input.val() );
         }
     } );
 
@@ -11207,7 +11340,7 @@ function showHelpText( e ) {
         popup;
 
     if ( button.parent().attr( "for" ) === "wtkey" ) {
-        text += "<a class='iab' target='_blank' href='https://opensprinkler.freshdesk.com/support/solutions/articles/5000017485-getting-a-weather-api#article-show-5000017485'>here</a>.";
+        text += "<a class='iab' target='_blank' href='https://openthings.freshdesk.com/support/solutions/articles/5000017485-getting-a-weather-api#article-show-5000017485'>here</a>.";
     }
 
     popup = $( "<div data-role='popup' data-theme='a'>" +
@@ -11232,6 +11365,10 @@ $.fn.focusInput = function() {
     }
 
     return this;
+};
+
+Number.prototype.clamp = function( min, max ) {
+	return Math.min( Math.max( this, min ), max );
 };
 
 function changePage( toPage, opts ) {
@@ -11601,7 +11738,7 @@ function exportObj( ele, obj, subject ) {
     if ( isFileCapable ) {
         $( ele ).attr( {
             href: "data:text/json;charset=utf-8," + obj,
-            download: "backup.json"
+            download: "backup-" + new Date().toLocaleDateString().replace( /\//g, "-" ) + ".json"
         } );
     } else {
         subject = subject || "OpenSprinkler Data Export on " + dateToString( new Date() );
@@ -11842,6 +11979,10 @@ function minutesToTime( minutes ) {
     }
 
     return hour + ":" + pad( minutes % 60 ) + " " + period;
+}
+
+function getBitFromByte( byte, bit ) {
+	return ( byte & ( 1 << bit ) ) !== 0;
 }
 
 function getTimezoneOffset() {

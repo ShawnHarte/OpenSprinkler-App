@@ -380,6 +380,9 @@ msgstr ""
 msgid "A valid gateway address is required when DHCP is not used"
 msgstr ""
 
+msgid "A valid DNS address is required when DHCP is not used"
+msgstr ""
+
 msgid "Weather Underground API key is required for weather-based control"
 msgstr ""
 
@@ -411,6 +414,12 @@ msgid "Configure Master"
 msgstr ""
 
 msgid "Master Station"
+msgstr ""
+
+msgid "Master On Adjustment"
+msgstr ""
+
+msgid "Master Off Adjustment"
 msgstr ""
 
 msgid "Master On Delay"
@@ -483,7 +492,15 @@ msgstr ""
 msgid "Attached Sensor Type"
 msgstr ""
 
+msgid ""
+"When using program switch, a switch is connected to the sensor port to "
+"trigger Program 1 every time the switch is pressed for at least 1 second."
+msgstr ""
+
 msgid "Flow"
+msgstr ""
+
+msgid "Program Switch"
 msgstr ""
 
 msgid "Use Rain Sensor"
@@ -493,6 +510,23 @@ msgid "Normally Open (Rain Sensor)"
 msgstr ""
 
 msgid "Flow Pulse Rate"
+msgstr ""
+
+msgid "Integrations"
+msgstr ""
+
+msgid "IFTTT Key"
+msgstr ""
+
+msgid ""
+"To enable IFTTT, a Maker channel key is required which can be obtained from "
+"https://ifttt.com"
+msgstr ""
+
+msgid "IFTTT Events"
+msgstr ""
+
+msgid "Select which events to send to IFTTT for use in recipes."
 msgstr ""
 
 msgid "LCD Screen"
@@ -542,6 +576,9 @@ msgstr ""
 msgid "Gateway Address"
 msgstr ""
 
+msgid "DNS Address"
+msgstr ""
+
 msgid "Use DHCP (restart required)"
 msgstr ""
 
@@ -552,6 +589,9 @@ msgid "Auto Reconnect"
 msgstr ""
 
 msgid "Ignore Password"
+msgstr ""
+
+msgid "Special Station Auto-Refresh"
 msgstr ""
 
 msgid "Reset"
@@ -584,6 +624,27 @@ msgid "Seconds"
 msgstr ""
 
 msgid "Milliseconds"
+msgstr ""
+
+msgid "Program Start"
+msgstr ""
+
+msgid "Rain Sensor Update"
+msgstr ""
+
+msgid "Flow Sensor Update"
+msgstr ""
+
+msgid "Weather Adjustment Update"
+msgstr ""
+
+msgid "Controller Reboot"
+msgstr ""
+
+msgid "Station Run"
+msgstr ""
+
+msgid "Select IFTTT Events"
 msgstr ""
 
 msgid "Preview Programs"

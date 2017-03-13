@@ -3,9 +3,9 @@
             xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:cdv="http://cordova.apache.org/ns/1.0"
             id="com.albahra.sprinklers"
-            version="1.5.0"
-            android-versionCode="61"
-            versionCode="61" >
+            version="1.6.0"
+            android-versionCode="62"
+            versionCode="62" >
 
 	    <name>OpenSprinkler</name>
 	    <description>
@@ -37,7 +37,7 @@
 		<preference name="KeepRunning" value="false"/>
 
 		<!-- Set the background color -->
-		<preference name="BackgroundColor" value="0x00333333"/>
+		<preference name="BackgroundColor" value="0x001c1c1c"/>
 
 		<!-- Prevent bounce scroll effect -->
 		<preference name="DisallowOverscroll" value="true"/>
@@ -120,6 +120,12 @@
 			<splash src="res/windows/screens/portrait.png" width="1152" height="1920" />
 	    </platform>
 
+        <!-- Windows Phone 8 Icons for PhoneGap -->
+		<platform name="wp8">
+ 			<icon src="res/windows/icons/icon48.png" />
+			<splash src="res/windows/screens/startup.jpg" />
+		</platform>
+
         <!-- iOS Specific Configuration -->
 
         <!-- Add description for GPS usage -->
@@ -134,7 +140,7 @@
 
         <!-- Add required short version string to iOS configuration -->
         <config-file platform="ios" parent="CFBundleShortVersionString">
-            <string>153</string>
+            <string>163</string>
         </config-file>
 
         <!-- Android specific Configuration -->
